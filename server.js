@@ -1,23 +1,15 @@
-// ============================================================
-//  ملف: server.js
-//  خادم وسيط (Backend) لتطبيق VidCraft AI
-// ============================================================
-
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 
-// تحميل المتغيرات البيئية
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// إعدادات الخادم
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// مفاتيح API (من متغيرات البيئة)
 const STABILITY_API_KEY = process.env.STABILITY_API_KEY;
 const RUNWAY_API_KEY = process.env.RUNWAY_API_KEY;
 
@@ -31,19 +23,16 @@ app.post('/api/generate-image', async (req, res) => {
   try {
     const { prompt, style = 'realistic', aspectRatio = '16:9', quality = '1024' } = req.body;
     
-    // التحقق من وجود الوصف
     if (!prompt || prompt.trim().length === 0) {
       return res.status(400).json({ error: 'الرجاء إدخال وصف للصورة' });
     }
-
-    // التحقق من وجود مفتاح API
+    
     if (!STABILITY_API_KEY) {
       return res.status(500).json({ error: 'مفتاح Stability API غير موجود' });
     }
 
     console.log(`📝 توليد صورة: "${prompt.substring(0, 30)}..."`);
 
-    // حساب الأبعاد حسب النسبة
     const qualityNum = parseInt(quality);
     let height = qualityNum;
     let width = qualityNum;
@@ -55,7 +44,6 @@ app.post('/api/generate-image', async (req, res) => {
       width = Math.round(qualityNum * 4 / 3);
     }
 
-    // استدعاء Stability AI
     const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
       method: 'POST',
       headers: {
@@ -98,26 +86,22 @@ app.post('/api/generate-image', async (req, res) => {
 });
 
 // ============================================================
-//  واجهة توليد الفيديو (RunwayML - محاكاة)
+//  واجهة توليد الفيديو (محاكاة)
 // ============================================================
 app.post('/api/generate-video', async (req, res) => {
   try {
-    const { script, style = 'cinematic', duration = 10, aspectRatio = '16:9', quality = '1080p' } = req.body;
+    const { script } = req.body;
     
     if (!script || script.trim().length === 0) {
       return res.status(400).json({ error: 'الرجاء إدخال نص الفيديو' });
     }
 
     console.log(`🎬 توليد فيديو: "${script.substring(0, 30)}..."`);
-
-    // محاكاة (في الإنتاج، استخدم RunwayML API الحقيقي)
-    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    // فيديو نموذجي للمعاينة
+    await new Promise(resolve => setTimeout(resolve, 2000));
     const videoUrl = 'https://www.w3schools.com/html/mov_bbb.mp4';
 
     res.json({ videoUrl });
-
   } catch (error) {
     console.error('❌ خطأ في توليد الفيديو:', error);
     res.status(500).json({ error: error.message || 'خطأ داخلي في الخادم' });
@@ -128,7 +112,7 @@ app.post('/api/generate-video', async (req, res) => {
 //  واجهة التحقق من صحة الخادم
 // ============================================================
 app.get('/api/health', (req, res) => {
-  res.json({ 
+  res.json({
     status: '✅ الخادم يعمل',
     timestamp: new Date().toISOString(),
     stability_key: STABILITY_API_KEY ? '✅ موجود' : '❌ غير موجود',
@@ -140,10 +124,5 @@ app.get('/api/health', (req, res) => {
 //  تشغيل الخادم
 // ============================================================
 app.listen(PORT, () => {
-  console.log('========================================');
-  console.log(`🚀 خادم VidCraft AI يعمل على http://localhost:${PORT}`);
-  console.log(`📋 اختبر الخادم: http://localhost:${PORT}/api/health`);
-  console.log(`🖼️  توليد الصورة: POST http://localhost:${PORT}/api/generate-image`);
-  console.log(`🎬 توليد الفيديو: POST http://localhost:${PORT}/api/generate-video`);
-  console.log('========================================');
+  console.log(`🚀 خادم VidCraft يعمل على http://localhost:${PORT}`);
 });
