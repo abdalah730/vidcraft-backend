@@ -21,11 +21,11 @@ async function autoTranslateToEnglish(text) {
     return data[0][0][0];
   } catch (err) {
     console.error('Translation error:', err);
-    return text; // في حال تعذر الترجمة نرسل النص الأصلي
+    return text;
   }
 }
 
-// 2. مسار توليد الصور الحقيقية (Stability AI)
+// 2. مسار توليد الصور (Stability AI - SDXL)
 app.post('/api/generate-image', async (req, res) => {
   try {
     const { prompt, style = 'realistic', aspectRatio = '16:9' } = req.body;
@@ -38,11 +38,10 @@ app.post('/api/generate-image', async (req, res) => {
       return res.status(500).json({ error: 'مفتاح Stability API غير متوفر في السيرفر' });
     }
 
-    // ترجمة الوصف تلقائياً للإنجليزية
     const translatedPrompt = await autoTranslateToEnglish(prompt);
     const finalPrompt = `${translatedPrompt}, ${style} style, high quality, 8k resolution`;
 
-    const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-v1-6/text-to-image', {
+    const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -55,8 +54,8 @@ app.post('/api/generate-image', async (req, res) => {
           { text: 'blurry, bad quality, nsfw, nude, violence', weight: -1 }
         ],
         cfg_scale: 7,
-        height: aspectRatio === '9:16' ? 768 : 512,
-        width: aspectRatio === '9:16' ? 512 : 768,
+        height: aspectRatio === '9:16' ? 1024 : 768,
+        width: aspectRatio === '9:16' ? 768 : 1024,
         samples: 1,
         steps: 30
       })
@@ -79,7 +78,7 @@ app.post('/api/generate-image', async (req, res) => {
   }
 });
 
-// 3. مسار توليد الفيديو الحقيقي (RunwayML API Gen-3)
+// 3. مسار توليد الفيديو (RunwayML API)
 app.post('/api/generate-video', async (req, res) => {
   try {
     const { script, duration = 5, aspectRatio = '16:9' } = req.body;
@@ -93,15 +92,11 @@ app.post('/api/generate-video', async (req, res) => {
       return res.status(500).json({ error: 'مفتاح Runway API غير متوفر في السيرفر' });
     }
 
-    // ترجمة سيناريو الفيديو
     const translatedScript = await autoTranslateToEnglish(script);
-
-    // تحويل مقاسات الأبعاد حسب المطلوب
     let ratio = '1280:768';
     if (aspectRatio === '9:16') ratio = '768:1280';
 
-    // أ) إرسال طلب إنشاء الفيديو إلى Runway
-    const startResponse = await fetch('https://api.dev.runwayml.com/v1/tasks', {
+    const startResponse = await fetch('https://api.runwayml.com/v1/tasks', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -123,18 +118,16 @@ app.post('/api/generate-video', async (req, res) => {
     }
 
     const taskId = taskData.id;
-
-    // ب) انتهاء الطلب ومتابعة العملية حتى يجهز الفيديو (Polling)
     let videoUrl = null;
     let status = 'PENDING';
     let attempts = 0;
-    const maxAttempts = 30; // الحد الأقصى للمحاولات (حوالي 2.5 دقيقة)
+    const maxAttempts = 30;
 
     while (status !== 'SUCCEEDED' && status !== 'FAILED' && attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 5000)); // الانتظار 5 ثوانٍ بين كل فحص
+      await new Promise(resolve => setTimeout(resolve, 5000));
       attempts++;
 
-      const checkResponse = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
+      const checkResponse = await fetch(`https://api.runwayml.com/v1/tasks/${taskId}`, {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'X-Runway-Version': '2024-11-06'
