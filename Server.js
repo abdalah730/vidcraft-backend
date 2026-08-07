@@ -20,9 +20,11 @@ console.log('✅ RUNWAY_API_KEY:', RUNWAY_API_KEY ? 'موجود' : 'غير مو�
 app.post('/api/generate-image', async (req, res) => {
   try {
     const { prompt, style = 'realistic', aspectRatio = '16:9', quality = '1024' } = req.body;
+    
     if (!prompt || prompt.trim().length === 0) {
       return res.status(400).json({ error: 'الرجاء إدخال وصف للصورة' });
     }
+    
     if (!STABILITY_API_KEY) {
       return res.status(500).json({ error: 'مفتاح Stability غير موجود' });
     }
@@ -54,10 +56,12 @@ app.post('/api/generate-image', async (req, res) => {
       const errorData = await response.json();
       return res.status(response.status).json({ error: errorData.message || 'فشل توليد الصورة' });
     }
+
     const data = await response.json();
     if (!data.artifacts || data.artifacts.length === 0) {
       return res.status(500).json({ error: 'لم يتم استلام أي صورة' });
     }
+
     res.json({ imageBase64: data.artifacts[0].base64 });
   } catch (error) {
     console.error('❌ خطأ:', error);
@@ -81,7 +85,7 @@ app.post('/api/generate-video', async (req, res) => {
   }
 });
 
-// ===== التحقق =====
+// ===== التحقق من صحة الخادم =====
 app.get('/api/health', (req, res) => {
   res.json({
     status: '✅ الخادم يعمل',
@@ -91,6 +95,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ===== تشغيل الخادم =====
 app.listen(PORT, () => {
   console.log(`🚀 خادم VidCraft يعمل على http://localhost:${PORT}`);
 });
