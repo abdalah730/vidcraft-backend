@@ -41,9 +41,9 @@ app.post('/api/generate-image', async (req, res) => {
     const translatedPrompt = await autoTranslateToEnglish(prompt);
     const finalPrompt = `${translatedPrompt}, ${style} style, high quality, 8k resolution`;
 
-    // ضبط الأبعاد لتطابق مقاييس SDXL 1.0 القياسية تماماً
-    const width = aspectRatio === '9:16' ? 896 : 1344;
-    const height = aspectRatio === '9:16' ? 1152 : 768;
+    // ضبط الأبعاد بدقة لتطابق مقاييس SDXL 1.0 القياسية تماماً
+    const width = (aspectRatio === '9:16') ? 896 : 1344;
+    const height = (aspectRatio === '9:16') ? 1152 : 768;
 
     const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
       method: 'POST',
@@ -100,7 +100,6 @@ app.post('/api/generate-video', async (req, res) => {
     let ratio = '1280:768';
     if (aspectRatio === '9:16') ratio = '768:1280';
 
-    // العودة لاستخدام النطاق المخصص لمفتاحك api.dev.runwayml.com
     const startResponse = await fetch('https://api.dev.runwayml.com/v1/tasks', {
       method: 'POST',
       headers: {
