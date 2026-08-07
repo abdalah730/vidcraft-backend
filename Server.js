@@ -14,9 +14,9 @@ const RUNWAY_API_KEY = process.env.RUNWAY_API_KEY;
 console.log("STABILITY_API_KEY:", STABILITY_API_KEY ? "موجود ✅" : "غير موجود ❌");
 console.log("RUNWAY_API_KEY:", RUNWAY_API_KEY ? "موجود ✅" : "غير موجود ❌");
 
-// مسار فحص صحة الاتصال بالخدمة
+// مسار فحص الاتصال
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Server is running smoothly' });
+  res.status(200).json({ status: 'ok', message: 'Server is running' });
 });
 
 // مسار توليد الصور
@@ -32,7 +32,7 @@ app.post('/api/generate-image', async (req, res) => {
       return res.status(500).json({ error: 'مفتاح Stability غير موجود' });
     }
 
-    // تحديد المقاسات القياسية المعتمدة المباشرة لـ SDXL
+    // تحديد أبعاد SDXL الرسمية المعتمدة
     let width = 1024;
     let height = 1024;
 
@@ -81,10 +81,11 @@ app.post('/api/generate-image', async (req, res) => {
   }
 });
 
-// مسار توليد الفيديو
+// مسار توليد الفيديو (يستقبل المدة أيضاً)
 app.post('/api/generate-video', async (req, res) => {
   try {
-    const { script } = req.body;
+    const { script, style, aspectRatio, duration = 5 } = req.body;
+
     if (!script || !script.trim()) {
       return res.status(400).json({ error: 'الرجاء إدخال نص الفيديو' });
     }
@@ -93,8 +94,12 @@ app.post('/api/generate-video', async (req, res) => {
       return res.status(500).json({ error: 'مفتاح Runway غير موجود' });
     }
 
-    // محاكاة استجابة أو إضافة الربط المباشر بـ Runway
-    return res.json({ message: 'جاري معالجة طلب الفيديو...', status: 'processing' });
+    return res.json({ 
+      message: 'جاري معالجة طلب الفيديو...', 
+      duration: duration,
+      aspectRatio: aspectRatio,
+      status: 'processing' 
+    });
   } catch (error) {
     console.error('Error:', error);
     return res.status(500).json({ error: error.message || 'خطأ داخلي' });
