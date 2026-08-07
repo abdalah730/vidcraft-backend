@@ -41,6 +41,10 @@ app.post('/api/generate-image', async (req, res) => {
     const translatedPrompt = await autoTranslateToEnglish(prompt);
     const finalPrompt = `${translatedPrompt}, ${style} style, high quality, 8k resolution`;
 
+    // ضبط الأبعاد لتطابق مقاييس SDXL 1.0 القياسية تماماً
+    const width = aspectRatio === '9:16' ? 896 : 1344;
+    const height = aspectRatio === '9:16' ? 1152 : 768;
+
     const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
       method: 'POST',
       headers: {
@@ -54,8 +58,8 @@ app.post('/api/generate-image', async (req, res) => {
           { text: 'blurry, bad quality, nsfw, nude, violence', weight: -1 }
         ],
         cfg_scale: 7,
-        height: aspectRatio === '9:16' ? 1024 : 768,
-        width: aspectRatio === '9:16' ? 768 : 1024,
+        height: height,
+        width: width,
         samples: 1,
         steps: 30
       })
@@ -96,7 +100,8 @@ app.post('/api/generate-video', async (req, res) => {
     let ratio = '1280:768';
     if (aspectRatio === '9:16') ratio = '768:1280';
 
-    const startResponse = await fetch('https://api.runwayml.com/v1/tasks', {
+    // العودة لاستخدام النطاق المخصص لمفتاحك api.dev.runwayml.com
+    const startResponse = await fetch('https://api.dev.runwayml.com/v1/tasks', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -127,7 +132,7 @@ app.post('/api/generate-video', async (req, res) => {
       await new Promise(resolve => setTimeout(resolve, 5000));
       attempts++;
 
-      const checkResponse = await fetch(`https://api.runwayml.com/v1/tasks/${taskId}`, {
+      const checkResponse = await fetch(`https://api.dev.runwayml.com/v1/tasks/${taskId}`, {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'X-Runway-Version': '2024-11-06'
