@@ -25,7 +25,7 @@ async function autoTranslateToEnglish(text) {
 // توليد الصور
 app.post('/api/generate-image', async (req, res) => {
   try {
-    const { prompt, style = 'realistic', aspectRatio = '16:9' } = req.body;
+    const { prompt, style, aspectRatio } = req.body;
     const translatedPrompt = await autoTranslateToEnglish(prompt);
     const width = (aspectRatio === '9:16') ? 896 : 1344;
     const height = (aspectRatio === '9:16') ? 1152 : 768;
@@ -51,45 +51,46 @@ app.post('/api/generate-image', async (req, res) => {
 // توليد الفيديو باستخدام Replicate
 app.post('/api/generate-video', async (req, res) => {
   try {
-    const { script, style, aspectRatio } = req.body;
+    const { script, style, duration, aspectRatio } = req.body;
     const translatedPrompt = await autoTranslateToEnglish(script);
     const fullPrompt = `${translatedPrompt}, ${style || 'cinematic'} style, high quality`;
-    
+
+    // استخدام موديل فيديو مستقر على Replicate
     const response = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
-        'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
-        'Content-Type': 'application/json'
+        'Authorization': `Bearer ${process.env.REPLICATE_API_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'wait'
       },
       body: JSON.stringify({
-        version: "a07f2c41", 
-        input: { prompt: fullPrompt }
+        version: "9f747673945c62801b13b84701c783929c0ee784e4748ec06229c891c3cf5177", // نموذج LTX-Video أو ما يناسبه
+        input: {
+          prompt: fullPrompt,
+          aspect_ratio: aspectRatio === '9:16' ? '9:16' : '16:9'
+        }
       })
     });
-    
+
     let data = await response.json();
-    
-    // الانتظار حتى ينتهي Replicate من معالجة الفيديو إذا كان في حالة processing
+
     let predictionUrl = data.urls?.get;
     let videoOutput = data.output;
 
     while (predictionUrl && !videoOutput) {
       await new Promise(resolve => setTimeout(resolve, 3000));
-      const checkRes = await fetch(predictionUrl, {
-        headers: { 'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}` }
+      const pollRes = await fetch(predictionUrl, {
+        headers: { 'Authorization': `Bearer ${process.env.REPLICATE_API_TOKEN}` }
       });
-      const checkData = await checkRes.json();
-      if (checkData.status === 'succeeded') {
-        videoOutput = checkData.output;
-        break;
-      } else if (checkData.status === 'failed') {
-        throw new Error('فشل معالجة الفيديو من المصدر');
-      }
+      data = await pollRes.json();
+      videoOutput = data.output;
     }
 
-    res.json({ success: true, videoUrl: Array.isArray(videoOutput) ? videoOutput[0] : videoOutput });
+    const videoUrl = Array.isArray(videoOutput) ? videoOutput[0] : videoOutput;
+
+    res.json({ success: true, videoUrl });
   } catch (error) {
-    res.status(500).json({ error: error.message || 'خطأ في توليد الفيديو' });
+    res.status(500).json({ error: 'خطأ في توليد الفيديو' });
   }
 });
 
