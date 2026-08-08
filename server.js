@@ -22,7 +22,7 @@ async function autoTranslateToEnglish(text) {
   return text;
 }
 
-// مسار توليد الصور (باستخدام نموذج Flux الشهير)
+// مسار توليد الصور
 app.post('/api/generate-image', async (req, res) => {
   try {
     const { prompt, style } = req.body;
@@ -43,13 +43,20 @@ app.post('/api/generate-image', async (req, res) => {
     });
 
     const data = await response.json();
-    res.status(200).json({ success: true, imageUrl: data.output ? data.output[0] : null });
+    
+    if (!response.ok) {
+      throw new Error(data.detail || 'فشل توليد الصورة');
+    }
+
+    const imageUrl = data.output ? (Array.isArray(data.output) ? data.output[0] : data.output) : null;
+    
+    res.status(200).json({ success: true, imageUrl });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// مسار توليد الفيديو (باستخدام نموذج Stable Video Diffusion)
+// مسار توليد الفيديو
 app.post('/api/generate-video', async (req, res) => {
   try {
     const { script } = req.body;
@@ -70,7 +77,14 @@ app.post('/api/generate-video', async (req, res) => {
     });
 
     const data = await response.json();
-    res.status(200).json({ success: true, videoUrl: data.output ? data.output : null });
+    
+    if (!response.ok) {
+      throw new Error(data.detail || 'فشل إنشاء الفيديو');
+    }
+
+    const videoUrl = data.output ? (Array.isArray(data.output) ? data.output[0] : data.output) : null;
+    
+    res.status(200).json({ success: true, videoUrl });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
