@@ -9,7 +9,7 @@ app.use(express.json());
 
 // دالة الترجمة التلقائية
 async function autoTranslateToEnglish(text) {
-  if (!text) return '';
+  if (!text) return text;
   try {
     const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(text)}`);
     const data = await res.json();
@@ -22,76 +22,58 @@ async function autoTranslateToEnglish(text) {
   return text;
 }
 
-// مسار توليد الصور
+// مسار توليد الصور (باستخدام نموذج Flux الشهير)
 app.post('/api/generate-image', async (req, res) => {
   try {
-    const { prompt, style, aspectRatio } = req.body;
-    if (!prompt) {
-      return res.status(400).json({ error: 'الرجاء إدخال وصف الصورة' });
-    }
+    const { prompt, style } = req.body;
+    if (!prompt) return res.status(400).json({ error: 'الرجاء إدخال وصف' });
 
     const translatedPrompt = await autoTranslateToEnglish(prompt);
-    const fullPrompt = `${translatedPrompt}, style: ${style || 'realistic'}, high quality`;
-
+    
     const response = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.REPLICATE_API_TOKEN}`,
         'Content-Type': 'application/json',
-        'Prefer': 'wait'
       },
       body: JSON.stringify({
-        version: "ac732df83cea7fff18b84701c783929c0ee784e4748ec06229c891c3cf5177",
-        input: { prompt: fullPrompt, aspect_ratio: aspectRatio || "1:1" }
+        version: "315967f082e60064f535805e54d32049e623c2174f762c648ef8979a071f6526",
+        input: { prompt: `${translatedPrompt}, ${style || 'photorealistic'}` }
       })
     });
 
     const data = await response.json();
-    if (!response.ok) throw new Error(data.detail || 'فشل توليد الصورة');
-    
-    const imageUrl = data.output ? (Array.isArray(data.output) ? data.output[0] : data.output) : null;
-    res.status(200).json({ success: true, imageUrl });
-
+    res.status(200).json({ success: true, imageUrl: data.output ? data.output[0] : null });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// مسار توليد الفيديو
+// مسار توليد الفيديو (باستخدام نموذج Stable Video Diffusion)
 app.post('/api/generate-video', async (req, res) => {
   try {
-    const { script, style, aspectRatio } = req.body;
-    if (!script) {
-      return res.status(400).json({ error: 'الرجاء إدخال سيناريو الفيديو' });
-    }
+    const { script } = req.body;
+    if (!script) return res.status(400).json({ error: 'الرجاء إدخال وصف' });
 
     const translatedScript = await autoTranslateToEnglish(script);
-    const fullPrompt = `${translatedScript}, ${style || 'cinematic'} style, high quality`;
 
     const response = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.REPLICATE_API_TOKEN}`,
         'Content-Type': 'application/json',
-        'Prefer': 'wait'
       },
       body: JSON.stringify({
-        version: "9f747673945c62801b13b84701c783929c0ee784e4748ec06229c891c3cf5177",
-        input: { prompt: fullPrompt, aspect_ratio: aspectRatio === '9:16' ? '9:16' : '16:9' }
+        version: "3f045722610da15c7e112d8a4e8d35392cf02621c4327668616113b53f65b870",
+        input: { input_image: null, prompt: translatedScript }
       })
     });
 
     const data = await response.json();
-    if (!response.ok) throw new Error(data.detail || 'فشل إنشاء الفيديو');
-
-    const videoUrl = data.output ? (Array.isArray(data.output) ? data.output[0] : data.output) : null;
-    res.status(200).json({ success: true, videoUrl });
-
+    res.status(200).json({ success: true, videoUrl: data.output ? data.output : null });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
